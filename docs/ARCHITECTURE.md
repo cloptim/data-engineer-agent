@@ -1,4 +1,4 @@
-# Architecture — end-to-end data flow
+# Architecture - end-to-end data flow
 
 This doc walks through what actually happens when this project runs: where the
 raw data comes from, how it moves from disk into the warehouse, and how each
@@ -6,9 +6,9 @@ Claude Code primitive (`CLAUDE.md`, skills, hooks, subagents, MCP servers) maps
 onto a specific point in the flow.
 
 It's the companion to:
-- **[README.md](../README.md)** — the architectural pitch (*why* this layout)
-- **[AGENT_WORKFLOWS.md](AGENT_WORKFLOWS.md)** — how to drive the agent (*what to type*)
-- this doc — *what happens at runtime*
+- **[README.md](../README.md)** - the architectural pitch (*why* this layout)
+- **[AGENT_WORKFLOWS.md](AGENT_WORKFLOWS.md)** - how to drive the agent (*what to type*)
+- this doc - *what happens at runtime*
 
 ---
 
@@ -26,7 +26,7 @@ public repo.
 
 There is no fixture file checked into the repo. The CI workflow
 (`.github/workflows/ci.yml`) hits the live API on every push too. That's the
-"good enough for a demo" trade-off — a production CI would mock the API or use
+"good enough for a demo" trade-off - a production CI would mock the API or use
 a committed fixture, but the live round-trip is more honest for teaching
 purposes. The cost is that CI is mildly fragile to GitHub API hiccups.
 
@@ -62,7 +62,7 @@ purposes. The cost is that CI is mildly fragile to GitHub API hiccups.
 │   • Flatten nested JSON (actor.login → actor_login,             │
 │     repo.name → repo_name)                                      │
 │   • CREATE OR REPLACE TABLE github.events_raw                   │
-│   • Idempotent — re-runs rebuild the table from disk            │
+│   • Idempotent - re-runs rebuild the table from disk            │
 └──────────────────────────────┬──────────────────────────────────┘
                                │ writes
                                ▼
@@ -106,7 +106,7 @@ purposes. The cost is that CI is mildly fragile to GitHub API hiccups.
 
 ## Step-by-step detail
 
-### Step ① — Ingest (`pipelines/ingest_github.py`)
+### Step ① - Ingest (`pipelines/ingest_github.py`)
 
 Pulls `?per_page=100` from the GitHub events API, filters to events whose
 `created_at` starts with today's date, writes them as JSON-lines to
@@ -127,7 +127,7 @@ The script is idempotent: re-running with the same `--date` rebuilds that one
 partition, leaving every other partition alone. This matters for backfills
 (see `backfill-data` skill).
 
-### Step ② — Load (`scripts/load_raw.py`)
+### Step ② - Load (`scripts/load_raw.py`)
 
 Reads the JSONL files via DuckDB's `read_json_auto`, flattens the nested
 GitHub structure (`actor.login` → `actor_login`, `repo.name` → `repo_name`),
@@ -140,13 +140,13 @@ transformation. It exists as a separate step because:
 - Pipelines stay write-only against the immutable raw zone. A bad pipeline
   can't corrupt the warehouse.
 - dbt's staging model reads from a real DuckDB source, which keeps it simple
-  SQL — no `read_json_auto()` with nested-field unpacking buried in source
+  SQL - no `read_json_auto()` with nested-field unpacking buried in source
   config.
 
 Adding a new source = append a `LOADERS["<source>"]` entry with the right
 flatten SQL.
 
-### Step ③ — Stage (`stg_github__events.sql`)
+### Step ③ - Stage (`stg_github__events.sql`)
 
 A dbt view that does 1:1 type casting and renaming on `github.events_raw`. No
 business logic. The conventions enforced here:
@@ -159,20 +159,20 @@ business logic. The conventions enforced here:
 Tests in `schema.yml`: `not_null` on the columns that should always be
 populated, `unique` on the PK.
 
-In the warehouse this lives at `main_staging.stg_github__events` —
+In the warehouse this lives at `main_staging.stg_github__events` -
 `main` from DuckDB's default database and `staging` from
 `dbt_project.yml`'s `+schema: staging` config.
 
-### Step ④ — Mart (`events_daily.sql`)
+### Step ④ - Mart (`events_daily.sql`)
 
 A dbt table aggregating staging events to a daily grain. This is the
-business-facing layer — what someone querying the warehouse for "events per
+business-facing layer - what someone querying the warehouse for "events per
 repo per day" actually reads.
 
 Grain: `(event_date, repo_name, event_type)`. Adds:
-- `event_count` — count of events
-- `unique_actors` — count distinct actors
-- `dbt_updated_at` — `current_timestamp` at build time (used by
+- `event_count` - count of events
+- `unique_actors` - count distinct actors
+- `dbt_updated_at` - `current_timestamp` at build time (used by
   `data_quality.py` to check freshness)
 
 Tests: `not_null` on every column in the grain plus `event_count`;
@@ -180,7 +180,7 @@ Tests: `not_null` on every column in the grain plus `event_count`;
 
 In the warehouse: `main_marts.events_daily`.
 
-### Step ⑤ — Audit (`scripts/data_quality.py`)
+### Step ⑤ - Audit (`scripts/data_quality.py`)
 
 Read-only checks over the marts:
 
@@ -262,7 +262,7 @@ Which emits structured log lines:
 {"event": "orchestrator_done", ...}
 ```
 
-If any step fails, the orchestrator halts and the rest don't run — that's the
+If any step fails, the orchestrator halts and the rest don't run - that's the
 demo version of what Airflow/Dagster would do in production.
 
 ---
@@ -272,7 +272,7 @@ demo version of what Airflow/Dagster would do in production.
 The flow is shaped so that adding a source (say, Stripe charges) is mostly
 parallel work to the existing GitHub pipeline:
 
-1. `pipelines/ingest_stripe.py` — same shape as `ingest_github.py`, writes to
+1. `pipelines/ingest_stripe.py` - same shape as `ingest_github.py`, writes to
    `data/raw/stripe/<date>/data.jsonl`.
 2. Add a `LOADERS["stripe"]` entry in `scripts/load_raw.py` with the right
    flatten SQL.
@@ -301,7 +301,7 @@ In a Claude Code session, all of that is one prompt:
 - **Multi-tenant isolation.** One developer, one local warehouse. A production
   setup would have separate dev/staging/prod databases and per-developer
   schemas.
-- **Live observability.** Datadog, Sentry, Monte Carlo — they'd watch the
+- **Live observability.** Datadog, Sentry, Monte Carlo - they'd watch the
   *running* warehouse rather than the code. Out of scope for the demo but the
   `data-quality-auditor` subagent + `/schedule` is a partial substitute.
 

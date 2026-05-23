@@ -1,18 +1,18 @@
-# Agent Workflows — driving this project end-to-end with one prompt
+# Agent Workflows - driving this project end-to-end with one prompt
 
 The point of the agent setup in `.claude/` is that recurring data-engineering work
-— adding a source, adding a model, backfilling, debugging a failure, auditing —
+- adding a source, adding a model, backfilling, debugging a failure, auditing -
 should each be **one prompt**. The conventions live in `CLAUDE.md`, the runbooks
 live in skills, the heavy lifting happens in subagents. You don't write the
 boilerplate and you don't burn tokens explaining the project.
 
 This guide is the usage companion to the architectural pitch in the README.
-The README answers "why is this structured this way?" — this doc answers
+The README answers "why is this structured this way?" - this doc answers
 "so what do I actually type?"
 
 ---
 
-## TL;DR — the prompts
+## TL;DR - the prompts
 
 In a Claude Code session in this repo, any of these is a complete request:
 
@@ -23,13 +23,13 @@ In a Claude Code session in this repo, any of these is a complete request:
 | Add a new mart                  | `Add a daily aggregate of events by repo and type.`           |
 | Add a new staging model         | `Create a staging model for the new shopify orders source.`   |
 | Backfill a date range           | `Backfill the last 30 days of GitHub events.`                 |
-| Diagnose a pipeline failure     | `Yesterday's GitHub pipeline failed — what happened?`         |
+| Diagnose a pipeline failure     | `Yesterday's GitHub pipeline failed - what happened?`         |
 | Audit the warehouse             | `Audit the warehouse.`                                        |
 | Review a SQL change             | `Review this SQL before I merge.`                             |
 | Verify before commit/push       | `Is this ready to commit?`  /  `Run the quality gate.`        |
 
 Each prompt routes to a different skill or subagent (or both). The next sections
-walk through *how* and *why* — but if all you want is the cheat sheet, you have
+walk through *how* and *why* - but if all you want is the cheat sheet, you have
 it.
 
 ---
@@ -50,14 +50,14 @@ What happens in response, in one pass:
 
 1. **`create-pipeline` skill** loads (the model recognizes the trigger phrase from
    its frontmatter) and follows the runbook to write
-   `pipelines/ingest_stripe.py` — partition-by-date, `_FAILED` sentinel, env-var
+   `pipelines/ingest_stripe.py` - partition-by-date, `_FAILED` sentinel, env-var
    auth, JSON-lines logging. The conventions are non-negotiable because the skill
    says so; the model doesn't have to invent them.
 
 2. **`pipeline-builder` subagent** spawns (because you asked for end-to-end, not
    just the script). It runs in its own context window and handles:
    - Loader entry in `scripts/load_raw.py` (a new `LOADERS["stripe"]` block
-     with the right flatten SQL — `customer.email` → `customer_email` etc.)
+     with the right flatten SQL - `customer.email` → `customer_email` etc.)
    - `PIPELINES` entry in `scripts/run.py`
    - `add-dbt-model` skill invocation for the staging model, producing
      `dbt_project/models/staging/stg_stripe__charges.sql` plus `schema.yml`
@@ -66,14 +66,14 @@ What happens in response, in one pass:
 
 3. **`pii-check.sh` hook** fires on each staging-model write. If `email` appears
    in a `SELECT` without a corresponding `md5(...)`, the write is **blocked**
-   (`exit 2`). The hook is shell, not LLM — it can't be argued with.
+   (`exit 2`). The hook is shell, not LLM - it can't be argued with.
 
 4. **`post-write-format.sh` hook** runs `sqlfluff fix` on each `.sql` write and
    `ruff format` on each `.py` write. Non-blocking; you don't see it happen.
 
 5. **`sql-reviewer` subagent** runs automatically against any non-trivial SQL
    change before the agent reports done. You get a verdict (approve / request
-   changes) with line-level comments, in a clean summary — not a 500-line
+   changes) with line-level comments, in a clean summary - not a 500-line
    stream of its analysis.
 
 6. **Summary returned to you.** Five-ish files diffed, a one-paragraph rationale,
@@ -81,7 +81,7 @@ What happens in response, in one pass:
 
 What you do: review the diff, run `python pipelines/ingest_stripe.py` to confirm
 ingestion works, then `python scripts/load_raw.py && cd dbt_project && dbt build`.
-If anything fails, the next prompt is just `the stripe pipeline failed — fix it`,
+If anything fails, the next prompt is just `the stripe pipeline failed - fix it`,
 which routes to the `pipeline-debugger` subagent.
 
 ### What you didn't have to do
@@ -96,7 +96,7 @@ This is the value prop, stated explicitly:
 - **Ask for formatting.** The post-write hook ran `sqlfluff`/`ruff` itself.
 - **Ask for a review.** `sql-reviewer` auto-invoked because the subagent's
   operating procedure says so.
-- **Babysit the long task.** The subagent runs in its own context window — its
+- **Babysit the long task.** The subagent runs in its own context window - its
   30-file exploration and intermediate edits never enter your main session.
 
 ---
@@ -121,17 +121,17 @@ the grain is composite. Materialization is `table` (per `dbt_project.yml`).
 Routes to the `backfill-data` skill. **The skill is opinionated:** snapshot first,
 run day-by-day, validate each partition, only then delete the snapshot. It will
 not improvise. This is the kind of operation where you *want* the model
-following a runbook instead of being creative — a wrong backfill quietly trashes
+following a runbook instead of being creative - a wrong backfill quietly trashes
 the warehouse.
 
 ### Diagnose a failure
 
-> `Yesterday's GitHub pipeline failed — what happened?`
+> `Yesterday's GitHub pipeline failed - what happened?`
 
 Routes to `debug-pipeline-failure` skill + `pipeline-debugger` subagent. The
 subagent finds the `_FAILED` sentinel, classifies the failure (auth / schema
 drift / upstream / our bug), diffs schemas if drift, and proposes a fix. The
-log dumps and stack traces stay in the subagent's context — you see a clean
+log dumps and stack traces stay in the subagent's context - you see a clean
 two-paragraph root-cause summary.
 
 ### Audit the warehouse
@@ -140,10 +140,10 @@ two-paragraph root-cause summary.
 
 Routes to `data-quality-auditor` subagent. Runs the checklist: freshness vs SLA,
 row-count anomaly, null-rate spike, PK uniqueness, PII leak scan in marts. The
-subagent has read-only warehouse access — it can't modify anything. Output is a
+subagent has read-only warehouse access - it can't modify anything. Output is a
 structured report with PASS/FAIL per check.
 
-This is also a good `/schedule` candidate — weekly Monday 9am audit, posted to
+This is also a good `/schedule` candidate - weekly Monday 9am audit, posted to
 wherever you want it.
 
 ### Review a SQL change
@@ -159,7 +159,7 @@ request-changes with line-level comments. Won't touch your file.
 ## Why this is token-efficient
 
 The whole architecture is built around one observation: **the obvious way to do
-this with an LLM — "put everything in the system prompt" — is wildly wasteful.**
+this with an LLM - "put everything in the system prompt" - is wildly wasteful.**
 A 4000-token system prompt full of conventions, sample code, PII rules, review
 checklists, and debug runbooks gets paid for **every turn**, even when you're
 just asking "what's the schema of `github.events_raw`?"
@@ -180,7 +180,7 @@ a failure.
 ### 2. Subagents have isolated context windows
 
 When `pipeline-builder` runs, its file reads, intermediate edits, tool failures,
-and self-corrections all happen in **its own context** — not yours. You get the
+and self-corrections all happen in **its own context** - not yours. You get the
 conclusion. A 30-file end-to-end scaffold doesn't cost you 30 files' worth of
 context budget in the main session.
 
@@ -190,7 +190,7 @@ tokens you'd still be carrying around three turns later.
 
 ### 3. Hooks are deterministic shell scripts, not LLM calls
 
-The PII check, the destructive-SQL block, the formatter — none of them spend a
+The PII check, the destructive-SQL block, the formatter - none of them spend a
 single token. They run as `exit 0` / `exit 2` outside the model. Pure
 automation, zero LLM cost, and unbypassable: the model can't talk a hook out of
 its decision.
@@ -216,7 +216,7 @@ end-to-end"   it in your main context.          just sees: "done, here's
               still present next turn.          ≈ 1–2k tokens.
 ```
 
-These numbers are illustrative, not measured — but the order of magnitude is
+These numbers are illustrative, not measured - but the order of magnitude is
 right. The work happened; the bytes didn't pile up in front of you.
 
 ---
@@ -240,7 +240,7 @@ correct it.
 
 ## What this guide deliberately doesn't cover
 
-- **Production scheduling** (cron, Airflow). That's a separate concern — see the
+- **Production scheduling** (cron, Airflow). That's a separate concern - see the
   README section on `scripts/run.py` and `/schedule`. The agent doesn't drive
   daily ETL runs; it builds the things that get scheduled.
 - **MCP server usage.** The DuckDB and filesystem MCP servers are how Claude
@@ -248,5 +248,5 @@ correct it.
   internally, not workflows you invoke. See `.claude/settings.json` and the
   README.
 - **Customizing skills/subagents.** Editing the files in `.claude/skills/` or
-  `.claude/agents/` is straightforward — they're just markdown with frontmatter
-  — but it's a separate topic from using what's already there.
+  `.claude/agents/` is straightforward - they're just markdown with frontmatter
+  - but it's a separate topic from using what's already there.

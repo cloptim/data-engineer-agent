@@ -1,6 +1,6 @@
 ---
 name: agent-workflows
-description: Use this skill when the user asks how to use this project's skills/subagents, how to add a new source/model end-to-end, what the one-prompt workflow is, how the agent setup saves tokens, or any "how do I drive Claude on this project?" question. Triggers include "how do I add a source", "what's the workflow for X", "how does the agent setup work", "show me how to use the skills", "what should I type to do Y". Points at docs/AGENT_WORKFLOWS.md, which contains the full guide. Don't reinvent the explanation — read the doc and follow it.
+description: Use this skill when the user asks how to use this project's skills/subagents, how to add a new source/model end-to-end, what the one-prompt workflow is, how the agent setup saves tokens, or any "how do I drive Claude on this project?" question. Triggers include "how do I add a source", "what's the workflow for X", "how does the agent setup work", "show me how to use the skills", "what should I type to do Y". Points at docs/AGENT_WORKFLOWS.md, which contains the full guide. Don't reinvent the explanation - read the doc and follow it.
 ---
 
 # Agent workflows guide
@@ -20,12 +20,12 @@ agent-driven workflows (add a source, add a model, backfill, debug, audit).
    - When to be explicit about naming a tool vs letting the agent route
 
 2. Answer the user's specific question by quoting or paraphrasing the relevant
-   section. Don't dump the whole doc back at them — they probably want one
+   section. Don't dump the whole doc back at them - they probably want one
    answer (e.g. "what prompt do I type to add a Stripe pipeline?"), not the
    full tour.
 
 3. If the user wants to *do* one of the workflows (not just learn about it),
-   let the underlying skill or subagent take over — `create-pipeline`,
+   let the underlying skill or subagent take over - `create-pipeline`,
    `add-dbt-model`, `pipeline-builder`, etc. This skill is the meta-guide,
    not the doer.
 
@@ -34,5 +34,5 @@ agent-driven workflows (add a source, add a model, backfill, debug, audit).
 - Don't reinvent or summarize from memory. The doc is the source of truth and
   may have been updated.
 - Don't load this skill alongside the workflow it describes (e.g. if the user
-  says "add a Stripe pipeline," `create-pipeline` is the right skill — not
+  says "add a Stripe pipeline," `create-pipeline` is the right skill - not
   this one).

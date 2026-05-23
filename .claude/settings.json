@@ -65,7 +65,7 @@
           {
             "type": "command",
             "command": ".claude/hooks/post-write-format.sh",
-            "description": "Run sqlfluff (for .sql) or ruff (for .py) after every write. Non-blocking — keeps the codebase formatted without nagging Claude during a multi-step edit."
+            "description": "Run sqlfluff (for .sql) or ruff (for .py) after every write. Non-blocking - keeps the codebase formatted without nagging Claude during a multi-step edit."
           }
         ]
       }
@@ -90,7 +90,7 @@
         "./warehouse.duckdb",
         "--readonly"
       ],
-      "description": "Read-only DuckDB MCP server. Exposes list_tables, describe_table, and read_query tools. The readonly flag is enforced at the connection level — a layered defense alongside the pre-sql-execute hook."
+      "description": "Read-only DuckDB MCP server. Exposes list_tables, describe_table, and read_query tools. The readonly flag is enforced at the connection level - a layered defense alongside the pre-sql-execute hook."
     },
 
     "filesystem": {

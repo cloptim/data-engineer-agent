@@ -77,6 +77,6 @@ models:
 
 ## Things the hook will catch (don't make these mistakes)
 
-- Selecting raw PII columns in staging — `pii-check` hook blocks the write.
-- Using `select *` in a mart — flagged by `sqlfluff`.
-- Forgetting tests on the PK — caught by the pre-commit hook running `dbt parse`.
+- Selecting raw PII columns in staging - `pii-check` hook blocks the write.
+- Using `select *` in a mart - flagged by `sqlfluff`.
+- Forgetting tests on the PK - caught by the pre-commit hook running `dbt parse`.

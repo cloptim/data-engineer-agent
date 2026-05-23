@@ -1,13 +1,13 @@
 ---
 name: debug-pipeline-failure
-description: Use this skill when a pipeline run failed and the user wants to find out why. Triggers include "the pipeline failed", "X pipeline is broken", "yesterday's run errored", "_FAILED file appeared", "data didn't land". Provides structured triage steps and recovery actions. Strongly consider delegating to the pipeline-debugger subagent for the actual log digging — this skill is the runbook the subagent (or you) follows.
+description: Use this skill when a pipeline run failed and the user wants to find out why. Triggers include "the pipeline failed", "X pipeline is broken", "yesterday's run errored", "_FAILED file appeared", "data didn't land". Provides structured triage steps and recovery actions. Strongly consider delegating to the pipeline-debugger subagent for the actual log digging - this skill is the runbook the subagent (or you) follows.
 ---
 
 # Debug a failed pipeline run
 
 This is a runbook. Follow the steps in order. **Don't guess. Each step has a clear output that tells you whether to continue or stop.**
 
-## Step 1 — Locate the failure
+## Step 1 - Locate the failure
 
 ```bash
 find data/raw -name "_FAILED" -newer /tmp/.last-checked 2>/dev/null
@@ -21,7 +21,7 @@ If there's no `_FAILED` file but the user says "the pipeline failed", check stdo
 ls -lt logs/ | head
 ```
 
-## Step 2 — Classify the failure
+## Step 2 - Classify the failure
 
 Read the exception. It falls into one of four buckets:
 
@@ -34,7 +34,7 @@ Read the exception. It falls into one of four buckets:
 
 If you can't classify it, that's the answer: tell the user and ask for the full traceback before guessing.
 
-## Step 3 — Schema drift specifically (most common in practice)
+## Step 3 - Schema drift specifically (most common in practice)
 
 ```bash
 # Compare today's partition to the last good one
@@ -47,13 +47,13 @@ If there's a new column or a renamed column:
 2. Add a comment with a TODO and a removal date.
 3. Notify the user. Schema drift is a signal upstream owner changed something.
 
-## Step 4 — Recovery
+## Step 4 - Recovery
 
 - **Retry** (auth, upstream outage, transient): `python pipelines/ingest_<source>.py --date <YYYY-MM-DD>`
 - **Backfill** (after a code fix): use the `backfill-data` skill.
 - **Skip** (data really is missing at the source): write a marker file `data/raw/<source>/<date>/_EMPTY` and document in CHANGELOG.
 
-## Step 5 — Prevention
+## Step 5 - Prevention
 
 After every real incident, add either:
 - A new test in `scripts/data_quality.py`, or
@@ -66,4 +66,4 @@ Every postmortem produces at least one of those. No exceptions.
 
 - Auth failures (don't assume which credential is stale).
 - Anything destructive (re-ingesting on top of existing data without explicit OK).
-- More than one source failing simultaneously — that's an infra issue, not a pipeline issue.
+- More than one source failing simultaneously - that's an infra issue, not a pipeline issue.

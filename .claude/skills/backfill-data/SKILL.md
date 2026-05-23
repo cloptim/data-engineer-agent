@@ -13,7 +13,7 @@ Follow the procedure exactly.
 1. **Confirm the range with the user.** Echo back the start date, end date, and the pipeline name.
    Get explicit "yes" before proceeding. Date ranges are easy to fat-finger.
 2. **Confirm the reason.** "Why are we backfilling?" If it's "schema drift fix" or "bug fix",
-   good. If it's "I'm not sure, the numbers look weird" — stop and run data quality checks first.
+   good. If it's "I'm not sure, the numbers look weird" - stop and run data quality checks first.
 3. **Estimate cost.** API calls, time, storage. Tell the user before they pull the trigger.
 
 ## Procedure
@@ -26,7 +26,7 @@ Follow the procedure exactly.
    ```
    Do NOT delete the originals until the backfill succeeds and is validated.
 
-2. **Run the pipeline per-date in a loop** (not as one big range — partition isolation matters):
+2. **Run the pipeline per-date in a loop** (not as one big range - partition isolation matters):
    ```bash
    for d in $(seq <start> <end>); do
        python pipelines/ingest_<source>.py --date "$d" || { echo "FAILED on $d"; break; }

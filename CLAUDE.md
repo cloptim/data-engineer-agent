@@ -1,4 +1,4 @@
-# DataOps Agent — Project Memory
+# DataOps Agent - Project Memory
 
 > This file is read by Claude Code at the start of every session.
 > It encodes the "house rules" so Claude behaves like a senior data engineer
@@ -8,11 +8,11 @@
 
 A small, realistic analytics stack:
 
-- **Ingestion** (`pipelines/`) — Python scripts that pull from APIs / drop files into `data/raw/`.
-- **Warehouse** — DuckDB file at `warehouse.duckdb` (Postgres-compatible enough for the demo).
-- **Transforms** (`dbt_project/`) — dbt-style staging → marts models.
-- **Orchestration** — plain `scripts/run.py` for the demo (in production this would be Airflow/Dagster).
-- **Quality** — dbt tests + a custom `scripts/data_quality.py` checker.
+- **Ingestion** (`pipelines/`) - Python scripts that pull from APIs / drop files into `data/raw/`.
+- **Warehouse** - DuckDB file at `warehouse.duckdb` (Postgres-compatible enough for the demo).
+- **Transforms** (`dbt_project/`) - dbt-style staging → marts models.
+- **Orchestration** - plain `scripts/run.py` for the demo (in production this would be Airflow/Dagster).
+- **Quality** - dbt tests + a custom `scripts/data_quality.py` checker.
 
 ## Hard rules (Claude must follow)
 
@@ -66,12 +66,12 @@ context window doesn't get polluted with stack traces and SQL dumps.
 
 ## Skills available
 
-Loaded on demand — do not preload. Just know they exist:
+Loaded on demand - do not preload. Just know they exist:
 
-- `create-pipeline` — scaffolds a new ingestion script with the project's idempotency pattern.
-- `add-dbt-model` — adds a staging or mart model with conventional tests.
-- `debug-pipeline-failure` — structured triage steps for a failed run.
-- `backfill-data` — safe procedure for backfilling a date range.
+- `create-pipeline` - scaffolds a new ingestion script with the project's idempotency pattern.
+- `add-dbt-model` - adds a staging or mart model with conventional tests.
+- `debug-pipeline-failure` - structured triage steps for a failed run.
+- `backfill-data` - safe procedure for backfilling a date range.
 
 ## What "done" means here
 

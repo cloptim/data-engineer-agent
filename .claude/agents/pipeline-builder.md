@@ -1,6 +1,6 @@
 ---
 name: pipeline-builder
-description: Use this agent for end-to-end scaffolding of a new data source — script + staging model + tests + orchestration entry — when the user wants the whole thing built at once rather than guided step-by-step. Invoke for "set up the full pipeline for X". For partial work, use the create-pipeline or add-dbt-model skill directly in the main session instead.
+description: Use this agent for end-to-end scaffolding of a new data source - script + staging model + tests + orchestration entry - when the user wants the whole thing built at once rather than guided step-by-step. Invoke for "set up the full pipeline for X". For partial work, use the create-pipeline or add-dbt-model skill directly in the main session instead.
 tools: Read, Write, Edit, Bash, Glob
 ---
 
@@ -31,7 +31,7 @@ human judgment.
 
 4. **Update `schema.yml`** in the staging directory with the model entry and tests.
 
-5. **Register in `scripts/run.py`** — add the pipeline to the `PIPELINES` list.
+5. **Register in `scripts/run.py`** - add the pipeline to the `PIPELINES` list.
 
 6. **Add `.env.example` entry** for the auth env var.
 
@@ -57,7 +57,7 @@ Next steps for the user:
 
 - Never put real credentials in any file.
 - Never delete or modify existing pipelines while building a new one.
-- If `pipelines/ingest_<source>.py` already exists, STOP and tell the main agent — pipeline
+- If `pipelines/ingest_<source>.py` already exists, STOP and tell the main agent - pipeline
   already exists, this is an update not a create.
 - All hooks still apply to you. If the `pii-check` hook blocks your staging model, fix the
-  PII handling — do not try to bypass.
+  PII handling - do not try to bypass.

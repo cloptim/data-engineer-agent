@@ -1,4 +1,4 @@
-# DataOps Agent — A Claude Code Architecture
+# DataOps Agent - A Claude Code Architecture
 
 A small but realistic data engineering project where Claude Code is wired up to
 behave like a senior data engineer on the team: it knows the conventions, refuses
@@ -37,7 +37,7 @@ So instead of cramming everything into one giant system prompt, this project use
 .
 ├── CLAUDE.md                          # The project "constitution" Claude reads first
 ├── .claude/
-│   ├── settings.json                  # Hooks, MCP servers, permissions — all wired here
+│   ├── settings.json                  # Hooks, MCP servers, permissions - all wired here
 │   ├── skills/                        # On-demand runbooks (loaded only when needed)
 │   │   ├── create-pipeline/SKILL.md
 │   │   ├── add-dbt-model/SKILL.md
@@ -67,8 +67,8 @@ So instead of cramming everything into one giant system prompt, this project use
 │   ├── run.py                         # Demo orchestrator
 │   ├── load_raw.py                    # JSONL → DuckDB loader (the "raw → warehouse" hop)
 │   ├── data_quality.py                # Read-only DQ checks (the auditor subagent uses this)
-│   ├── verify.sh                      # Quality gate — pre-commit, CI, and Claude all call this
-│   └── test-hooks.sh                  # Proves the hooks actually work — 12/12 passing
+│   ├── verify.sh                      # Quality gate - pre-commit, CI, and Claude all call this
+│   └── test-hooks.sh                  # Proves the hooks actually work - 12/12 passing
 ├── data/
 │   ├── raw/                           # Immutable, partitioned by date
 │   └── processed/
@@ -83,74 +83,74 @@ So instead of cramming everything into one giant system prompt, this project use
 
 ## The five primitives, in detail
 
-### 1. `CLAUDE.md` — the memory layer
+### 1. `CLAUDE.md` - the memory layer
 
 This is the only file Claude Code reads automatically every session. It contains:
 
 - **Hard rules** that override the model's defaults (raw data is immutable, schema changes
   need migrations, PII must be hashed in staging).
-- **Conventions** (naming, SQL style, Python deps) — so Claude doesn't propose pandas when
+- **Conventions** (naming, SQL style, Python deps) - so Claude doesn't propose pandas when
   the project uses polars.
-- **Layout map** — where to put new files.
-- **Delegation guide** — when to spawn which subagent.
+- **Layout map** - where to put new files.
+- **Delegation guide** - when to spawn which subagent.
 
 What it deliberately does *not* contain: procedural how-tos. Those bloat the main context.
 They go in skills.
 
-### 2. Skills — the knowledge layer (loaded on demand)
+### 2. Skills - the knowledge layer (loaded on demand)
 
 Each skill is a single `SKILL.md` file with YAML frontmatter declaring its trigger
 conditions. Claude loads it only when it decides the skill is relevant. The four here:
 
-- **`create-pipeline`** — scaffolds a new ingestion script with the project's idempotency
+- **`create-pipeline`** - scaffolds a new ingestion script with the project's idempotency
   pattern (date-partitioned writes, `_FAILED` sentinel, env-var auth).
-- **`add-dbt-model`** — creates a staging or mart model with the right naming, PII handling,
+- **`add-dbt-model`** - creates a staging or mart model with the right naming, PII handling,
   and test entries.
-- **`debug-pipeline-failure`** — a real triage runbook: locate the failure, classify it
+- **`debug-pipeline-failure`** - a real triage runbook: locate the failure, classify it
   (auth / schema drift / upstream / our bug), diff partitions, propose a fix.
-- **`backfill-data`** — the safe procedure: snapshot first, run day-by-day, validate, only
+- **`backfill-data`** - the safe procedure: snapshot first, run day-by-day, validate, only
   then delete the snapshot. The kind of thing you don't want an LLM improvising.
 
 Why skills instead of one giant prompt: a 12-page instruction set in the system prompt
 crowds out the actual work. Skills let Claude pull in 200 lines of guidance only when
 relevant, then drop it.
 
-### 3. Hooks — the guardrail layer (deterministic)
+### 3. Hooks - the guardrail layer (deterministic)
 
 Three hooks, all reading the Claude Code hook payload from stdin and exiting 0 (allow) or
 2 (hard block).
 
-- **`pre-sql-execute.sh`** — Fires on `PreToolUse` for Bash. Greps for `DROP TABLE`,
+- **`pre-sql-execute.sh`** - Fires on `PreToolUse` for Bash. Greps for `DROP TABLE`,
   `TRUNCATE`, unqualified `DELETE`, `ALTER ... DROP COLUMN`. Blocks unless the operator
   has included an explicit `I_HAVE_BACKED_UP` override. **This is the single most important
-  file in the project** — it's the thing that lets you run an autonomous agent against a
+  file in the project** - it's the thing that lets you run an autonomous agent against a
   real warehouse without losing sleep.
-- **`pii-check.sh`** — Fires on `PreToolUse` for Write/Edit on files matching
+- **`pii-check.sh`** - Fires on `PreToolUse` for Write/Edit on files matching
   `dbt_project/models/staging/*.sql`. Scans for raw `email|phone|ssn|dob|address`
   columns appearing in a SELECT without a corresponding `md5(...)`. Blocks if found.
-- **`post-write-format.sh`** — Fires on `PostToolUse`. Runs `sqlfluff fix` on SQL files
-  and `ruff format` on Python. Non-blocking — it just keeps the codebase tidy.
+- **`post-write-format.sh`** - Fires on `PostToolUse`. Runs `sqlfluff fix` on SQL files
+  and `ruff format` on Python. Non-blocking - it just keeps the codebase tidy.
 
 The point of hooks: a model can be cajoled, jailbroken, or simply confused into ignoring
 a rule in `CLAUDE.md`. A hook is deterministic shell code. It either fires or it doesn't.
 
 **Tested:** `scripts/test-hooks.sh` runs 12 cases against simulated payloads. Currently 12/12 pass.
 
-### 4. Subagents — the delegation layer (isolated contexts)
+### 4. Subagents - the delegation layer (isolated contexts)
 
 Each subagent is a markdown file in `.claude/agents/` with its own system prompt, tool
 allowlist, and operating procedure. When Claude spawns one, the subagent's work happens
-in a *separate context window* — its log digging, file scans, and intermediate outputs
+in a *separate context window* - its log digging, file scans, and intermediate outputs
 never appear in the main session.
 
-- **`sql-reviewer`** — Read-only. Reviews proposed SQL/dbt changes for correctness, PII
+- **`sql-reviewer`** - Read-only. Reviews proposed SQL/dbt changes for correctness, PII
   compliance, conventions, performance, and idempotency. Returns a verdict (approve / request
   changes / block) with line-level comments. Invoked automatically before non-trivial commits.
-- **`data-quality-auditor`** — Read-only. Runs the standard audit checklist (freshness, row
+- **`data-quality-auditor`** - Read-only. Runs the standard audit checklist (freshness, row
   count anomaly, null rate, PK integrity, PII leak scan) and returns a structured report.
-- **`pipeline-debugger`** — Triages failed runs. Finds `_FAILED` sentinels, classifies the
+- **`pipeline-debugger`** - Triages failed runs. Finds `_FAILED` sentinels, classifies the
   failure, diffs schemas if drift, proposes a fix. Hands the actual fix back to the main agent.
-- **`pipeline-builder`** — Builds a full new source end-to-end (script + model + tests +
+- **`pipeline-builder`** - Builds a full new source end-to-end (script + model + tests +
   orchestration entry) without coming back for intermediate approvals on boilerplate.
 
 Why subagents matter: the main agent stays focused on user dialogue and planning. A bug
@@ -158,19 +158,19 @@ hunt that involves reading 30 log files and comparing two raw partitions happens
 sandbox. When the subagent returns, the main session gets a clean two-paragraph summary,
 not 30 log files.
 
-### 5. MCP servers — the distribution layer (structured external access)
+### 5. MCP servers - the distribution layer (structured external access)
 
 `settings.json` declares two MCP servers:
 
-- **`warehouse`** — A DuckDB MCP server in **read-only mode** pointed at `warehouse.duckdb`.
+- **`warehouse`** - A DuckDB MCP server in **read-only mode** pointed at `warehouse.duckdb`.
   Claude can list tables, describe schemas, and run SELECT queries through structured tool
-  calls — not by shelling out to `duckdb` and parsing text output.
-- **`filesystem`** — A filesystem MCP server scoped to `./data/`. Lets Claude inspect raw
+  calls - not by shelling out to `duckdb` and parsing text output.
+- **`filesystem`** - A filesystem MCP server scoped to `./data/`. Lets Claude inspect raw
   partitions and processed files without granting unrestricted file access.
 
 Why MCP instead of plain Bash: structured tools have schemas, return typed data, and are
 naturally limited in scope. The DuckDB MCP server's read-only flag is a second layer of
-defense alongside the `pre-sql-execute` hook — even if the hook were bypassed, the
+defense alongside the `pre-sql-execute` hook - even if the hook were bypassed, the
 connection itself refuses writes.
 
 ---
@@ -178,10 +178,10 @@ connection itself refuses writes.
 ## Trying it out
 
 ```bash
-# 1. Install deps (minimal — duckdb for the warehouse, sqlfluff/ruff for formatting) in a Python Virtual Environment
+# 1. Install deps (minimal - duckdb for the warehouse, sqlfluff/ruff for formatting) in a Python Virtual Environment
 pip install duckdb dbt-duckdb sqlfluff ruff
 
-# 2. Install dbt package dependencies (one-time — needed because marts tests use dbt_utils)
+# 2. Install dbt package dependencies (one-time - needed because marts tests use dbt_utils)
 cd dbt_project && dbt deps && cd ..
 
 # 3. Run the example pipeline (writes JSONL to data/raw/github/<date>/)
@@ -234,7 +234,7 @@ adding a mart, backfilling, debugging a failed run, auditing the warehouse, is e
 **one prompt**. The agent loads the relevant skill, delegates the heavy lifting to a
 subagent in an isolated context window, and hands you back a clean diff plus a
 summary. You don't write the boilerplate and you don't burn tokens explaining the
-project on every turn — the conventions live in `CLAUDE.md`, the runbooks live in
+project on every turn - the conventions live in `CLAUDE.md`, the runbooks live in
 skills, and the verbose work happens elsewhere.
 
 The cheat sheet:
@@ -244,7 +244,7 @@ The cheat sheet:
 | Add a new source end-to-end     | `Add a Stripe charges pipeline end-to-end.`             |
 | Add a new mart                  | `Add a daily aggregate of events by repo and type.`     |
 | Backfill a date range           | `Backfill the last 30 days of GitHub events.`           |
-| Diagnose a pipeline failure     | `Yesterday's GitHub pipeline failed — what happened?`   |
+| Diagnose a pipeline failure     | `Yesterday's GitHub pipeline failed - what happened?`   |
 | Audit the warehouse             | `Audit the warehouse.`                                  |
 
 **See [`docs/AGENT_WORKFLOWS.md`](docs/AGENT_WORKFLOWS.md)** for the full walkthrough:
@@ -254,7 +254,7 @@ approach. The `agent-workflows` skill points Claude at that doc automatically wh
 you ask "how do I use this project."
 
 **See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** if you want to understand what
-*actually happens* at runtime — where the data comes from (live GitHub API, not
+*actually happens* at runtime - where the data comes from (live GitHub API, not
 fixtures), how it moves through the five steps (ingest → land → load → stage →
 mart → audit), and how each Claude Code primitive maps onto a specific point in
 the flow. The `architecture-overview` skill points Claude at that doc when you
@@ -266,13 +266,13 @@ ask "how does this work?"
 
 The Claude Code hooks in `.claude/hooks/` only fire when Claude is the actor. A
 colleague running `git commit` directly bypasses every one of them. So this
-project layers in a second, agent-independent gate that catches everyone — Claude,
+project layers in a second, agent-independent gate that catches everyone - Claude,
 humans, bots, force-pushes:
 
 | Layer | What fires | Where it lives | Audience |
 |---|---|---|---|
 | Claude Code hooks | PII check, destructive-SQL block, auto-format | `.claude/hooks/` | Claude only |
-| `scripts/verify.sh` | ruff, sqlfluff, dbt parse, hook self-tests, dbt build (`--full`), data quality (`--full`) | Inside the repo | Anyone — single source of truth |
+| `scripts/verify.sh` | ruff, sqlfluff, dbt parse, hook self-tests, dbt build (`--full`), data quality (`--full`) | Inside the repo | Anyone - single source of truth |
 | Git pre-commit | Standard hygiene + `verify.sh` | `.pre-commit-config.yaml` | Local commits |
 | GitHub Actions CI | `verify.sh --full` after ingest + load | `.github/workflows/ci.yml` | Every push / PR |
 | `quality-gate` skill | Runs `verify.sh`, explains failures, proposes fixes | `.claude/skills/quality-gate/` | Claude (agent-driven) |
@@ -291,7 +291,7 @@ scripts/verify.sh --full      # also runs dbt build + data quality
 ```
 
 In a Claude Code session, `"verify my changes"` or `"is this ready to commit?"`
-triggers the `quality-gate` skill — which runs the same script, but adds the
+triggers the `quality-gate` skill - which runs the same script, but adds the
 ability to *reason about* failures (explain the sqlfluff violation, propose a
 fix, notice that a schema change will break a downstream mart). That's the
 agent-layer-on-top-of-deterministic-layer pattern this project exists to
@@ -315,10 +315,10 @@ demonstrate.
   task than four 600-token specialists.
 
 **What's deliberately missing.** Plugins. They're the "distribution" layer in the
-architecture — packaging skills + hooks + subagents + MCP server configs into a single
+architecture - packaging skills + hooks + subagents + MCP server configs into a single
 installable unit so multiple repos can share the same agent setup. For a single-repo
 demo, plugins don't add value; everything's already in `.claude/`. The trigger to
-convert is a concrete second consumer — another team, another project, or a community
+convert is a concrete second consumer - another team, another project, or a community
 publication. Until that exists, plugin packaging is premature.
 
 The interesting property worth calling out: this project is **plugin-ready by
@@ -327,28 +327,28 @@ accident.** The `.claude/` directory is cleanly separated from the demo's code
 If/when that becomes worth doing, there are three natural extraction candidates,
 ordered from broadest audience to narrowest:
 
-1. **`agent-quality-gate` plugin** — `scripts/verify.sh` + the `quality-gate` skill +
+1. **`agent-quality-gate` plugin** - `scripts/verify.sh` + the `quality-gate` skill +
    a `.pre-commit-config.yaml` template + a `.github/workflows/ci.yml` template.
    Not data-engineering-specific. Any repo with linters and tests can use the
    "single script invoked by pre-commit + CI + a Claude skill" pattern. The most
    broadly reusable piece of the demo.
 
-2. **`data-engineering-guardrails` plugin** — the three hooks (`pre-sql-execute`,
+2. **`data-engineering-guardrails` plugin** - the three hooks (`pre-sql-execute`,
    `pii-check`, `post-write-format`) plus the hard-rules section of `CLAUDE.md`.
    No opinion on the stack. Anyone running a warehouse where humans or LLMs might
    issue destructive SQL or leak PII benefits. Highest leverage per line of code
    because hooks are deterministic and unbypassable.
 
-3. **`dbt-duckdb-toolkit` plugin** — the four data-engineering skills
+3. **`dbt-duckdb-toolkit` plugin** - the four data-engineering skills
    (`create-pipeline`, `add-dbt-model`, `backfill-data`, `debug-pipeline-failure`)
    plus the four subagents (`sql-reviewer`, `data-quality-auditor`,
    `pipeline-debugger`, `pipeline-builder`) plus the dbt-specific conventions in
-   `CLAUDE.md`. Most opinionated — assumes the staging/marts pattern, the
+   `CLAUDE.md`. Most opinionated - assumes the staging/marts pattern, the
    partition-by-date pattern, the `_FAILED` sentinel. Narrower audience but
    higher value to that audience.
 
 If you ever do publish them, the suggested pattern is: keep this repo as the
-*reference implementation* (it stays useful because plugins are pure config —
+*reference implementation* (it stays useful because plugins are pure config -
 they don't show the primitives in concert with real data flowing), and have the
 demo install its own plugin to dogfood it.
 

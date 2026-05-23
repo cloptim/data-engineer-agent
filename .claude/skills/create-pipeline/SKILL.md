@@ -7,7 +7,7 @@ description: Use this skill when the user wants to add a new ingestion pipeline 
 
 ## When to invoke
 
-The user wants to add a *new source* to the warehouse. Not modifying an existing one — that's a
+The user wants to add a *new source* to the warehouse. Not modifying an existing one - that's a
 straight edit. This is "we just signed up for the Stripe API, get the data in."
 
 ## Procedure
@@ -16,11 +16,11 @@ straight edit. This is "we just signed up for the Stripe API, get the data in."
    - source name (short slug, e.g. `stripe`, `salesforce`, `shopify`)
    - extraction mode: `full` (re-pull everything every run) or `incremental` (by `updated_at` cursor)
    - auth: env var name for the API key, or path to a credentials file
-   If any of these are obvious from context, don't ask — assume and state the assumption.
+   If any of these are obvious from context, don't ask - assume and state the assumption.
 
 2. **Scaffold the script** at `pipelines/ingest_<source>.py` using the template below.
    The template is non-negotiable on three points:
-   - Writes to `data/raw/<source>/<run_date>/` — never overwrites a previous day.
+   - Writes to `data/raw/<source>/<run_date>/` - never overwrites a previous day.
    - Wraps the whole thing in a `try/except` that writes a `_FAILED` sentinel file on error.
    - Logs to stdout in JSON lines so the orchestrator can parse it.
 
@@ -28,7 +28,7 @@ straight edit. This is "we just signed up for the Stripe API, get the data in."
    `PIPELINES` list with a cron-style schedule.
 
 4. **Create a corresponding staging model** at `dbt_project/models/staging/stg_<source>__<entity>.sql`.
-   Even a stub — it signals the contract. Use the `add-dbt-model` skill for this step.
+   Even a stub - it signals the contract. Use the `add-dbt-model` skill for this step.
 
 5. **Do not** add credentials to the repo. Reference the env var name in a comment in
    `.env.example` and tell the user to set it.
