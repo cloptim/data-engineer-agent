@@ -1,0 +1,32 @@
+version: 2
+
+sources:
+  - name: github
+    description: "Raw GitHub events landed by pipelines/ingest_github.py"
+    tables:
+      - name: events_raw
+        description: "JSON-lines events partitioned by date under data/raw/github/"
+
+models:
+  - name: stg_github__events
+    description: "Typed and cleaned GitHub events. 1:1 with raw."
+    columns:
+      - name: event_id
+        description: "GitHub's event ID. Primary key."
+        tests:
+          - not_null
+          - unique
+      - name: event_type
+        description: "PushEvent, PullRequestEvent, etc."
+        tests:
+          - not_null
+      - name: actor_login
+        description: "Public GitHub username. Not PII (public handle by GitHub TOS)."
+      - name: repo_name
+        description: "owner/repo string."
+        tests:
+          - not_null
+      - name: event_at
+        description: "When the event occurred (UTC)."
+        tests:
+          - not_null

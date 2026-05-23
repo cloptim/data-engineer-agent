@@ -1,0 +1,67 @@
+# .github/workflows/ci.yml — server-side quality gate.
+#
+# Why CI exists separately from .pre-commit-config.yaml:
+#   - pre-commit only fires when the *developer* commits locally. CI is the
+#     unconditional safety net for everyone — humans, bots, force-pushes.
+#   - CI runs the *full* verify (dbt build + data quality), which is too slow
+#     for every local commit but reasonable on a build server.
+#
+# Both pre-commit and CI call scripts/verify.sh — that script is the single
+# source of truth for what "passing" means. They can't drift apart.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install dbt packages
+        # dbt_utils is required by the marts uniqueness test.
+        working-directory: dbt_project
+        run: dbt deps
+
+      - name: Ingest sample data
+        # The full verify needs a populated warehouse. We pull a small slice of
+        # live GitHub events — same script the demo uses locally. No auth needed
+        # at this rate. If the API is flaky on a given run, ci will fail loudly
+        # and visibly, which is fine for a demo project.
+        run: python pipelines/ingest_github.py
+
+      - name: Load raw into warehouse
+        run: python scripts/load_raw.py
+
+      - name: Run full quality gate
+        # --full enables dbt build + data_quality.py in addition to the static
+        # checks. This is the same script developers can run locally.
+        run: bash scripts/verify.sh --full
+
+      - name: Upload dbt artifacts on failure
+        # Helpful for diagnosing CI failures without having to reproduce locally.
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-target
+          path: dbt_project/target/
+          retention-days: 7

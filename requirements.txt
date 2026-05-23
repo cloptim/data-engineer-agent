@@ -1,0 +1,14 @@
+# Project dependencies — kept minimal on purpose.
+# Pin to versions known to work with the dbt 1.11 / duckdb 1.10 stack used in the demo.
+# CI installs from this file; local dev can also use it: `pip install -r requirements.txt`.
+
+# Runtime — the warehouse + transformations
+duckdb>=1.10,<2.0
+dbt-duckdb>=1.10,<2.0
+
+# Linting / formatting — required by scripts/verify.sh and the post-write-format hook
+sqlfluff>=3.0,<4.0
+ruff>=0.6,<1.0
+
+# Quality gate runner — required by .pre-commit-config.yaml
+pre-commit>=3.7,<5.0

@@ -1,0 +1,7 @@
+dataops_demo:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ../warehouse.duckdb
+      threads: 4

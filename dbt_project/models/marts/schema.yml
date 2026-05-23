@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: events_daily
+    description: "Daily event counts per repo and event type."
+    columns:
+      - name: event_date
+        description: "Date the events occurred (UTC)."
+        tests:
+          - not_null
+      - name: repo_name
+        tests:
+          - not_null
+      - name: event_type
+        tests:
+          - not_null
+      - name: event_count
+        description: "Count of events for the (date, repo, type) grain."
+        tests:
+          - not_null
+
+    # Composite primary key uniqueness
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - event_date
+              - repo_name
+              - event_type

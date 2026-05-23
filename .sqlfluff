@@ -1,0 +1,38 @@
+# sqlfluff config — aligns the linter with the project's SQL style declared in CLAUDE.md.
+#
+# Conventions enforced here:
+#   - lowercase keywords (CV09 / capitalisation.keywords)
+#   - trailing commas in SELECT (CV03 disabled — CLAUDE.md requires trailing commas)
+#   - aligned column aliases tolerated (LT01 relaxed for alias keyword spacing)
+#   - CTEs over subqueries is a structural preference, not a sqlfluff rule
+#   - one column per line is naturally produced by the templates and not enforced separately
+
+[sqlfluff]
+dialect = duckdb
+templater = jinja
+# 100 chars matches the project's de-facto style for SQL comments and CTE names.
+max_line_length = 100
+# Limit to the rules we actually care about — keeps lint output focused.
+exclude_rules = convention.select_trailing_comma
+
+[sqlfluff:indentation]
+tab_space_size = 4
+indent_unit = space
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.identifiers]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.types]
+extended_capitalisation_policy = lower
+
+# Allow padded spacing around `as` so column aliases can be visually aligned —
+# this is the style used in stg_github__events.sql and is intentional.
+[sqlfluff:rules:layout.spacing]
+# Disabling the alias-keyword spacing nag; column alignment is a feature, not a bug here.
+ignore_comments = True

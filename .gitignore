@@ -1,0 +1,31 @@
+# Secrets — never commit
+.env
+*.pem
+**/credentials*
+
+# Warehouse — local to each developer
+warehouse.duckdb
+warehouse.duckdb.wal
+
+# Data
+data/raw/
+data/processed/
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# dbt
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ruff_cache/
+
+# Personal Claude Code overrides
+.claude/settings.local.json
+
+# dbt telemetry — per-machine UUID, do not commit
+dbt_project/.user.yml

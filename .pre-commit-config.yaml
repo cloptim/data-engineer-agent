@@ -1,0 +1,47 @@
+# .pre-commit-config.yaml — local quality gate that fires on every `git commit`.
+#
+# What this catches:
+#   - Lint / format errors (ruff for Python, sqlfluff for SQL)
+#   - dbt model parse failures
+#   - Hook regressions (scripts/test-hooks.sh must still be 12/12)
+#   - Trailing whitespace, missing newline at EOF, large files committed by accident
+#
+# What this does NOT catch (intentionally — too slow for every commit):
+#   - dbt build against a real warehouse
+#   - scripts/data_quality.py
+# Those run in CI (.github/workflows/ci.yml via scripts/verify.sh --full) and can
+# also be triggered locally with `scripts/verify.sh --full`.
+#
+# Install once per clone:
+#   pre-commit install
+#
+# Skip for a specific commit (use sparingly):
+#   git commit --no-verify
+
+repos:
+  # Standard hygiene hooks — fast and broadly applicable.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+
+  # Project quality gate — delegates to scripts/verify.sh so this file and CI
+  # can't drift apart. Using a local hook (not a remote repo) because verify.sh
+  # is the single source of truth.
+  - repo: local
+    hooks:
+      - id: project-verify-fast
+        name: Project quality gate (fast)
+        entry: scripts/verify.sh
+        language: system
+        pass_filenames: false
+        # Runs on every commit. Output is visible inline; non-zero exit blocks the commit.
+        stages: [pre-commit]
+        description: |
+          Runs ruff, sqlfluff, dbt parse, and the hook self-test suite.
+          For the full gate (dbt build + data quality), run `scripts/verify.sh --full`
+          locally or wait for CI.

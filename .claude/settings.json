@@ -1,0 +1,106 @@
+{
+  "$comment": [
+    "Project-scoped Claude Code settings. Lives at .claude/settings.json so the whole team",
+    "shares the same hooks, MCP servers, and permissions when they clone the repo.",
+    "Personal overrides go in ~/.claude/settings.json (gitignored, per-developer)."
+  ],
+
+  "permissions": {
+    "$comment": "Allow common dev commands without prompting; require approval for anything that touches credentials, the network broadly, or the warehouse outside the project path.",
+    "allow": [
+      "Bash(python pipelines/*.py:*)",
+      "Bash(cd dbt_project && dbt *)",
+      "Bash(sqlfluff *)",
+      "Bash(ruff *)",
+      "Bash(pytest *)",
+      "Bash(jq *)",
+      "Bash(find data/raw:*)",
+      "Read(*)",
+      "Write(pipelines/*)",
+      "Write(dbt_project/**)",
+      "Write(scripts/*)",
+      "Write(docs/*)",
+      "Write(CHANGELOG.md)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(curl * | bash)",
+      "Bash(curl * | sh)",
+      "Read(.env)",
+      "Read(**/credentials*)",
+      "Read(**/*.pem)",
+      "Write(.env)",
+      "Write(warehouse.duckdb)"
+    ]
+  },
+
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-sql-execute.sh",
+            "description": "Block destructive SQL (DROP/TRUNCATE/unqualified DELETE/ALTER DROP COLUMN) unless the operator includes I_HAVE_BACKED_UP. Exit 2 hard-stops the tool call."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/pii-check.sh",
+            "description": "Scan staging-model SQL writes for raw PII columns. Blocks the write if email/phone/ssn/dob/address appear unhashed."
+          }
+        ]
+      }
+    ],
+
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/post-write-format.sh",
+            "description": "Run sqlfluff (for .sql) or ruff (for .py) after every write. Non-blocking — keeps the codebase formatted without nagging Claude during a multi-step edit."
+          }
+        ]
+      }
+    ]
+  },
+
+  "mcpServers": {
+    "$comment": [
+      "MCP (Model Context Protocol) servers give Claude structured access to external systems.",
+      "Two servers wired here:",
+      "  - 'warehouse': read-only DuckDB connection so Claude can describe tables, run safe SELECTs,",
+      "                 and check row counts without us having to expose a generic Bash shell.",
+      "  - 'filesystem': scoped to the data/ directory so Claude can browse raw partitions safely.",
+      "Both run locally. No credentials leave the developer's machine."
+    ],
+
+    "warehouse": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-duckdb",
+        "--db-path",
+        "./warehouse.duckdb",
+        "--readonly"
+      ],
+      "description": "Read-only DuckDB MCP server. Exposes list_tables, describe_table, and read_query tools. The readonly flag is enforced at the connection level — a layered defense alongside the pre-sql-execute hook."
+    },
+
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "./data"
+      ],
+      "description": "Filesystem MCP server scoped to ./data. Lets Claude inspect raw partitions and processed outputs without granting unrestricted file access."
+    }
+  }
+}
