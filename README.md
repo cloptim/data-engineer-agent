@@ -314,10 +314,43 @@ demonstrate.
   trying to be ingestion + transform + review + audit + debug is worse at every individual
   task than four 600-token specialists.
 
-**What's deliberately missing.** Plugins. They're the "distribution" layer in the diagram —
-packaging skills + hooks + subagents for sharing. For a single-repo demo, plugins don't add
-value; everything's already in `.claude/`. In a real organization where multiple teams share
-the same data engineering standards, you'd publish this `.claude/` directory as a plugin.
+**What's deliberately missing.** Plugins. They're the "distribution" layer in the
+architecture — packaging skills + hooks + subagents + MCP server configs into a single
+installable unit so multiple repos can share the same agent setup. For a single-repo
+demo, plugins don't add value; everything's already in `.claude/`. The trigger to
+convert is a concrete second consumer — another team, another project, or a community
+publication. Until that exists, plugin packaging is premature.
+
+The interesting property worth calling out: this project is **plugin-ready by
+accident.** The `.claude/` directory is cleanly separated from the demo's code
+(`pipelines/`, `dbt_project/`, `scripts/`), so lifting it out is mostly mechanical.
+If/when that becomes worth doing, there are three natural extraction candidates,
+ordered from broadest audience to narrowest:
+
+1. **`agent-quality-gate` plugin** — `scripts/verify.sh` + the `quality-gate` skill +
+   a `.pre-commit-config.yaml` template + a `.github/workflows/ci.yml` template.
+   Not data-engineering-specific. Any repo with linters and tests can use the
+   "single script invoked by pre-commit + CI + a Claude skill" pattern. The most
+   broadly reusable piece of the demo.
+
+2. **`data-engineering-guardrails` plugin** — the three hooks (`pre-sql-execute`,
+   `pii-check`, `post-write-format`) plus the hard-rules section of `CLAUDE.md`.
+   No opinion on the stack. Anyone running a warehouse where humans or LLMs might
+   issue destructive SQL or leak PII benefits. Highest leverage per line of code
+   because hooks are deterministic and unbypassable.
+
+3. **`dbt-duckdb-toolkit` plugin** — the four data-engineering skills
+   (`create-pipeline`, `add-dbt-model`, `backfill-data`, `debug-pipeline-failure`)
+   plus the four subagents (`sql-reviewer`, `data-quality-auditor`,
+   `pipeline-debugger`, `pipeline-builder`) plus the dbt-specific conventions in
+   `CLAUDE.md`. Most opinionated — assumes the staging/marts pattern, the
+   partition-by-date pattern, the `_FAILED` sentinel. Narrower audience but
+   higher value to that audience.
+
+If you ever do publish them, the suggested pattern is: keep this repo as the
+*reference implementation* (it stays useful because plugins are pure config —
+they don't show the primitives in concert with real data flowing), and have the
+demo install its own plugin to dogfood it.
 
 **Summary.** The real win is mundane: write the rules
 down once (`CLAUDE.md`), make the dangerous ones unbypassable (hooks), keep the noisy work
